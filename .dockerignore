@@ -8,9 +8,14 @@ frontend/dist
 data/analytics.sqlite3*
 data/.tickets.json.lock
 .env*
+**/.env*
 .openrouter-key
 **/*openrouter-key*
 *.pem
 *.key
 *.log
+**/*.pem
+**/*.key
+**/*.log
 secrets
+**/secrets
