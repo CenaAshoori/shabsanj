@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+frontend/dist/
+.DS_Store
+data/analytics.sqlite3*
+data/.tickets.json.lock
+.env*
+!.env.example
+.openrouter-key
+**/*openrouter-key*
+*.pem
+*.key
+*.log
+secrets/

@@ -1,0 +1,49 @@
+name: Check application and Docker startup
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start with a fresh volume and no API key
+        run: docker compose up --build --wait --wait-timeout 120
+      - name: Check included data and public configuration
+        run: |
+          python3 - <<'PY'
+          import json
+          from urllib.request import urlopen
+          def get(path):
+              with urlopen('http://127.0.0.1:8765' + path, timeout=10) as response:
+                  return json.load(response)
+          health = get('/api/health')
+          assert health['status'] == 'ok'
+          assert health['offer_count'] > 0
+          assert health['tour_count'] > 0
+          assert health['ticket_count'] > 0
+          assert get('/api/search')['hotels']
+          assert get('/api/tours')['tours']
+          assert get('/api/tickets/routes')['routes']
+          assert get('/api/config') == {'openrouter_configured': False}
+          print('All bundled datasets available on first startup without an API key.')
+          PY
+      - name: Run backend checks inside the image
+        run: docker compose exec -T app python -m unittest discover -s backend -t .
+      - name: Check data survives container recreation
+        run: |
+          docker compose exec -T app python -c "from pathlib import Path; Path('/app/data/restart-check').write_text('preserved')"
+          docker compose up -d --force-recreate --wait --wait-timeout 120
+          docker compose exec -T app python -c "from pathlib import Path; assert Path('/app/data/restart-check').read_text() == 'preserved'"
+      - name: Show container diagnostics
+        if: failure()
+        run: docker compose logs --tail=80
+      - name: Clean up test containers
+        if: always()
+        run: docker compose down --volumes
